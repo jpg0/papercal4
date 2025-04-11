@@ -34,7 +34,7 @@ val targetOs = when {
 val osArch = System.getProperty("os.arch")
 val targetArch = when (osArch) {
     "x86_64", "amd64" -> "x64"
-    "aarch64" -> "arm64"
+    "aarch64", "arm" -> "arm64"
     else -> error("Unsupported arch: $osArch")
 }
 
