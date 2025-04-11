@@ -54,4 +54,7 @@ task("execute", JavaExec::class) {
     group = "application"
     mainClass = "com.trillica.MainKt"
     classpath = sourceSets["main"].runtimeClasspath
+    if(System.getProperty("os.arch") == "arm") {
+        systemProperties = mapOf("os.arch" to "aarch64")
+    }
 }
