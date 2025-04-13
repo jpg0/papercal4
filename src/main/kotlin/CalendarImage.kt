@@ -1,29 +1,22 @@
 package com.trillica
 
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import biweekly.ICalendar
 import biweekly.component.VEvent
-import org.jetbrains.skia.*
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
+import java.time.*
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 
@@ -35,16 +28,14 @@ fun CalendarImage(ical: ICalendar, date: LocalDate = LocalDate.now(), modifier: 
     Box(modifier = modifier.background(Color.White)) {
         Column {
             Row(modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                AliasedText(date.month.name.titlecase() + " " + date.year)
+                AliasedText(date.month.name.titlecase() + " " + date.year, style = TextStyle(fontSize = 36.sp))
             }
 
             Calendar2Week(ical, date)
-            Row {
-                AliasedText(
-                    text = "Footer",
-                )
-            }
 
+            Row(modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                AliasedText(text = "Footer")
+            }
         }
     }
 }
@@ -107,14 +98,34 @@ fun EventRow(ical: ICalendar, start: LocalDate, today: LocalDate, modifier: Modi
                 )
 
                 for (event in ical.eventsOn(day)) {
-                    AliasedText(
-                        modifier = modifier.padding(2.dp),
-                        text = event.summary.value.trim(),
-                        overflow = TextOverflow.Clip
-                    )
+                    if(event.dateStart.value.hasTime()) { //normal event
+                        eventWithinDay(
+                            LocalDateTime.ofInstant(
+                                event.dateStart.value.toInstant(),
+                                ZoneId.systemDefault()
+                            ).toLocalTime(), event.summary.value)
+                    } else { //all day event
+
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun eventWithinDay(start: LocalTime, summary: String) {
+    Row(Modifier.fillMaxWidth()) {
+           AliasedText(
+            modifier = Modifier.padding(start = 2.dp, top = 2.dp, bottom = 2.dp).border(2.dp, Color.Green),
+            text = start.format(DateTimeFormatter.ofPattern("HH:mm"))
+        )
+            AliasedText(
+                modifier = Modifier.weight(2f).padding(2.dp).border(2.dp, Color.Green),
+                text = summary.trim(),
+                overflow = TextOverflow.Clip
+            )
+
     }
 }
 
@@ -128,72 +139,10 @@ fun DayNameRow(start: LocalDate, modifier: Modifier = Modifier) {
                     .border(2.dp, Color.Black)
                     .weight(1f)
             ) {
-                Row {
+                Row(modifier = Modifier.align(Alignment.CenterHorizontally)) {
                     AliasedText(modifier = modifier.padding(2.dp), text = dayOfWeek.name.substring(0, 3).titlecase())
                 }
             }
         }
-    }
-}
-
-
-val cfont by lazy {
-    val typeface = FontMgr.default.matchFamilyStyle("Arial", FontStyle.NORMAL)
-    Font(typeface, 21f).apply {
-        this.hinting = FontHinting.NONE
-        this.edging = FontEdging.ALIAS
-        this.isSubpixel = false
-        this.setBitmapsEmbedded(true)
-    }
-}
-
-@OptIn(ExperimentalTextApi::class, ExperimentalComposeUiApi::class)
-@Composable
-fun CText1(text: String, ringText: Boolean = false, maxWidth: Dp = Int.MAX_VALUE.dp, modifier: Modifier = Modifier) {
-
-    val textMeasurer = rememberTextMeasurer()
-
-    val layoutResult = textMeasurer.measure(
-        text,
-        style = TextStyle(
-            fontFamily = FontFamily("Arial"),
-            fontSize = TextUnit(21f, TextUnitType.Sp)
-        )
-    )
-
-    val border = if (ringText) 2 else 0
-
-    val width = min(
-        layoutResult.size.width.dp, maxWidth
-    ) + 2 * border.dp
-    val height = layoutResult.size.height.dp + 2 * border.dp
-
-    val canvasModifier = modifier
-        .size(DpSize(width, height)).let {
-            if (ringText) {
-                it.border(border.dp, Color.Red, shape = CircleShape)
-            } else it
-        }.padding(1.dp)
-
-
-    Canvas(modifier = canvasModifier) {
-
-        val skijaCanvas = drawContext.canvas.nativeCanvas //as org.jetbrains.skia.Canvas
-        val paint = Paint().apply {
-            color = org.jetbrains.skia.Color.BLACK
-            mode = PaintMode.FILL
-            isAntiAlias = false // Disable anti-aliasing
-            isDither = false
-        }
-
-        skijaCanvas.clipRect(Rect(0f, 0f, width.toPx(), height.toPx()), antiAlias = false, mode = ClipMode.INTERSECT)
-        //skijaCanvas.clipRect(Rect(0f, 0f, 10f, 10f), antiAlias = false, mode = ClipMode.INTERSECT)
-        skijaCanvas.drawString(
-            text,
-            border.toFloat(),
-            layoutResult.size.height.toFloat() - 2 * border - 4,
-            cfont,
-            paint
-        )
     }
 }

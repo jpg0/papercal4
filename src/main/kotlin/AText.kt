@@ -21,16 +21,14 @@ import org.jetbrains.skia.*
 // Helper to convert Compose TextStyle to Skia Font (basic version)
 // Note: Handling font families/weights/styles robustly requires more complex mapping.
 @Composable
-private fun rememberSkiaFont(style: TextStyle): Font {
-    return remember {
-        Font(
-            typeface = FontMgr.default.matchFamilyStyle("Arial", FontStyle.NORMAL),
-            size = 21f
-        ).apply {
-            this.hinting = FontHinting.NONE
-            this.edging = FontEdging.ALIAS
-            this.isSubpixel = false
-        }
+private fun skiaFont(style: TextStyle): Font {
+    return Font(
+        typeface = FontMgr.default.matchFamilyStyle("Arial", FontStyle.NORMAL),
+        size = style.fontSize.value
+    ).apply {
+        this.hinting = FontHinting.NONE
+        this.edging = FontEdging.ALIAS
+        this.isSubpixel = false
     }
 }
 
@@ -46,11 +44,11 @@ private fun rememberSkiaFont(style: TextStyle): Font {
 fun AliasedText(
     text: String,
     modifier: Modifier = Modifier,
-    style: TextStyle = LocalTextStyle.current.copy(fontSize = 21.sp),
+    style: TextStyle = LocalTextStyle.current.copy(fontSize = 20.sp),
     overflow: TextOverflow = TextOverflow.Clip
 ) {
     val textMeasurer = rememberTextMeasurer()
-    val skiaFont = rememberSkiaFont(style)
+    val skiaFont = skiaFont(style)
 
     // Remember the Skia Paint
     val skiaPaint = remember {
@@ -86,29 +84,22 @@ fun AliasedText(
                 if (layoutResult != null) {
                     // Access the native canvas from the DrawScope's drawContext
                     drawContext.canvas.nativeCanvas.let { nativeCanvas ->
-                        if (nativeCanvas is org.jetbrains.skia.Canvas) {
 
-                            nativeCanvas.save() // Save canvas state
-                            try {
-                                // Clip to the bounds of this Canvas/DrawScope
-                                nativeCanvas.clipRect(Rect.makeWH(size.width, size.height))
+                        nativeCanvas.save() // Save canvas state
+                        try {
+                            // Clip to the bounds of this Canvas/DrawScope
+                            nativeCanvas.clipRect(Rect.makeWH(size.width, size.height))
 
-                                // Now draw - will be clipped by the rect above
-                                nativeCanvas.drawString(
-                                    s = text,
-                                    x = 0f,
-                                    y = layoutResult.firstBaseline,
-                                    font = skiaFont,
-                                    paint = skiaPaint
-                                )
-                            } finally {
-                                nativeCanvas.restore() // Restore to previous state (removes clip)
-                            }
-
-                        } else {
-                            println("Warning: AliasedText expects a Skia native canvas. Found: ${nativeCanvas::class.qualifiedName}")
-                            // Optionally, draw fallback standard text here?
-                            // drawText(textLayoutResult) // Draw normally as fallback
+                            // Now draw - will be clipped by the rect above
+                            nativeCanvas.drawString(
+                                s = text,
+                                x = 0f,
+                                y = layoutResult.firstBaseline,
+                                font = skiaFont,
+                                paint = skiaPaint
+                            )
+                        } finally {
+                            nativeCanvas.restore() // Restore to previous state (removes clip)
                         }
                     }
                 }
@@ -121,6 +112,7 @@ fun AliasedText(
         // 1. Measure the text intrinsically to determine desired size
         val measuredResult = textMeasurer.measure(
             AnnotatedString(text),
+            softWrap = false,
             style = style,
             constraints = constraints, // Pass constraints for potential wrapping
             overflow = overflow
